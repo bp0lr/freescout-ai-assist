@@ -1,6 +1,12 @@
 <?php
 
 Route::group(['middleware' => ['web', 'auth']], function () {
+    Route::get('/hexaweb/ai/settings',          'Modules\HexawebAIAssist\Http\Controllers\AIAssistController@settings')
+        ->name('hexaweb.ai.settings');
+    Route::post('/hexaweb/ai/settings',         'Modules\HexawebAIAssist\Http\Controllers\AIAssistController@settingsSave')
+        ->name('hexaweb.ai.settings.save');
+    Route::post('/hexaweb/ai/settings/refresh-models', 'Modules\HexawebAIAssist\Http\Controllers\AIAssistController@refreshModels')
+        ->name('hexaweb.ai.settings.refresh-models');
     Route::post('/hexaweb/ai/compose',          'Modules\HexawebAIAssist\Http\Controllers\AIAssistController@compose')
         ->name('hexaweb.ai.compose');
     Route::post('/hexaweb/ai/template',         'Modules\HexawebAIAssist\Http\Controllers\AIAssistController@template')

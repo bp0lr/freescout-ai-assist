@@ -36,8 +36,7 @@
     <form method="GET" action="{{ url('/hexaweb/ai/logs') }}" style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <select name="provider" class="form-control input-sm" style="width:auto;">
             <option value="">All Providers</option>
-            <option value="claude" {{ request('provider') === 'claude' ? 'selected' : '' }}>Claude</option>
-            <option value="gpt"    {{ request('provider') === 'gpt'    ? 'selected' : '' }}>GPT</option>
+            <option value="openrouter" {{ request('provider') === 'openrouter' ? 'selected' : '' }}>OpenRouter</option>
         </select>
         <select name="status" class="form-control input-sm" style="width:auto;">
             <option value="">All Statuses</option>
@@ -98,10 +97,8 @@
                         {{ $log->user_email ?: '—' }}
                     </td>
                     <td>
-                        @if($log->provider === 'claude')
-                            <span class="label" style="background:#8e59c3;">Claude</span>
-                        @elseif($log->provider === 'gpt')
-                            <span class="label" style="background:#10a37f;">GPT</span>
+                        @if($log->provider === 'openrouter')
+                            <span class="label" style="background:#6467f2;">OpenRouter</span>
                         @else
                             {{ $log->provider }}
                         @endif

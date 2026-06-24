@@ -1,8 +1,8 @@
 {
     "name": "HexawebAIAssist",
     "alias": "hexawebaiassist",
-    "description": "Unified AI reply assistant — compose, templates, and polish via Claude or GPT.",
-    "version": "1.0.0",
+    "description": "Unified AI reply assistant via OpenRouter — compose, templates, and polish.",
+    "version": "2.0.0",
     "active": 1,
     "detached": true,
     "providers": ["Modules\\HexawebAIAssist\\Providers\\AIAssistServiceProvider"]

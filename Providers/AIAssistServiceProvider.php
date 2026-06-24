@@ -137,43 +137,6 @@ class AIAssistServiceProvider extends ServiceProvider
             // Total cost for this conversation
             $totalCost = $logs->sum('cost_usd');
 
-            // GPT cached balance
-            $gptBalanceHtml = '';
-            try {
-                $gptCached = \Option::get('gpt_assist.balance_cache', null);
-                if ($gptCached) {
-                    $gb = json_decode($gptCached, true);
-                    if (isset($gb['available'])) {
-                        $gbDate = isset($gb['fetched_at']) ? date('M j, g:ia', strtotime($gb['fetched_at'])) : '?';
-                        $gptBalanceHtml = '<span style="font-size:11px;color:#10a37f;margin-right:8px;" title="GPT credit balance as of ' . htmlspecialchars($gbDate) . '">'
-                            . '<span style="background:#10a37f;color:#fff;padding:1px 4px;border-radius:2px;font-size:10px;font-weight:700;">GPT</span>'
-                            . ' $' . htmlspecialchars($gb['available']) . ' avail'
-                            . ' <span style="color:#aaa;font-size:10px;">(' . htmlspecialchars($gbDate) . ')</span>'
-                            . '</span>';
-                    }
-                }
-            } catch (\Exception $e) {}
-
-            // Claude manual balance
-            $claudeBalanceHtml = '';
-            try {
-                $claudeBalance = \Option::get('claude_assist.manual_balance', null);
-                if ($claudeBalance) {
-                    $claudeBalDate = \Option::get('claude_assist.manual_balance_date', null);
-                    $claudeBalDateStr = $claudeBalDate ? date('M j, g:ia', strtotime($claudeBalDate)) : null;
-                    $claudeBalanceHtml = '<a href="' . url('/hexaweb/claude-assist/settings') . '" style="font-size:11px;color:#8e59c3;text-decoration:none;white-space:nowrap;" title="' . ($claudeBalDateStr ? 'Last updated ' . htmlspecialchars($claudeBalDateStr) : 'Update in Claude settings') . '">'
-                        . '<span style="background:#8e59c3;color:#fff;padding:1px 4px;border-radius:2px;font-size:10px;font-weight:700;">Claude</span>'
-                        . ' $' . htmlspecialchars($claudeBalance) . ' avail'
-                        . ($claudeBalDateStr ? ' <span style="color:#aaa;font-size:10px;">(' . htmlspecialchars($claudeBalDateStr) . ')</span>' : '')
-                        . '</a>';
-                } else {
-                    $claudeBalanceHtml = '<a href="' . url('/hexaweb/claude-assist/settings') . '" style="font-size:11px;color:#8e59c3;text-decoration:none;white-space:nowrap;" title="Set Claude balance in settings">'
-                        . '<span style="background:#8e59c3;color:#fff;padding:1px 4px;border-radius:2px;font-size:10px;font-weight:700;">Claude</span>'
-                        . ' Balance <i class="glyphicon glyphicon-new-window" style="font-size:9px;"></i>'
-                        . '</a>';
-                }
-            } catch (\Exception $e) {}
-
             ?>
 <div id="hbt-conv-logs" style="margin:16px 0;border:1px solid <?php echo $hasError ? '#e74c3c' : '#d0bfee'; ?>;border-radius:6px;background:#fff;">
   <div id="hbt-conv-logs-header"
@@ -189,8 +152,6 @@ class AIAssistServiceProvider extends ServiceProvider
       <?php endif; ?>
     </span>
     <div style="display:flex;align-items:center;gap:10px;" onclick="event.stopPropagation();">
-      <?php echo $gptBalanceHtml; ?>
-      <?php echo $claudeBalanceHtml; ?>
       <a href="<?php echo $logsUrl; ?>" target="_blank" style="font-size:11px;color:#aaa;">
         View All <i class="glyphicon glyphicon-new-window" style="font-size:10px;"></i>
       </a>
@@ -247,10 +208,8 @@ class AIAssistServiceProvider extends ServiceProvider
           <td style="padding:7px 10px;white-space:nowrap;<?php echo $isErr ? 'color:#a94442;font-weight:600;' : 'color:#555;'; ?>"><?php echo htmlspecialchars($dt); ?></td>
           <td style="padding:7px 10px;color:#666;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo htmlspecialchars($log->user_email ?? ''); ?>"><?php echo htmlspecialchars($log->user_email ?? '—'); ?></td>
           <td style="padding:7px 10px;">
-            <?php if ($log->provider === 'claude'): ?>
-              <span style="background:#8e59c3;color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700;">Claude</span>
-            <?php elseif ($log->provider === 'gpt'): ?>
-              <span style="background:#10a37f;color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700;">GPT</span>
+            <?php if ($log->provider === 'openrouter'): ?>
+              <span style="background:#6467f2;color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700;">OpenRouter</span>
             <?php else: echo htmlspecialchars($log->provider ?? '—'); endif; ?>
           </td>
           <td style="padding:7px 10px;color:#555;"><?php echo htmlspecialchars($log->action ?? '—'); ?></td>
@@ -332,49 +291,31 @@ class AIAssistServiceProvider extends ServiceProvider
 
         // ── Unified AI panel in reply form ────────────────────────────
         \Eventy::addAction('reply_form.after', function ($conversation) {
-            $claudeKey = $this->getApiKey('claude_assist.api_key_encrypted');
-            $gptKey    = $this->getApiKey('gpt_assist.api_key_encrypted');
+            $key = $this->getApiKey('openrouter_assist.api_key_encrypted');
 
-            // No keys at all — show setup notice
-            if (!$claudeKey && !$gptKey) {
+            // No key — show setup notice
+            if (!$key) {
                 echo '<div style="margin-top:10px;padding:8px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:13px;color:#795548;">'
                     . '<i class="glyphicon glyphicon-info-sign"></i> AI Assist not configured. '
-                    . 'Set up <a href="' . url('/hexaweb/claude-assist/settings') . '">Claude</a>'
-                    . ' or <a href="' . url('/hexaweb/gpt-assist/settings') . '">GPT</a> API key to get started.'
+                    . 'Add your <a href="' . url('/hexaweb/ai/settings') . '">OpenRouter API key</a> to get started.'
                     . '</div>';
                 return;
             }
 
-            // Claude model options
-            $claudeModel   = \Option::get('claude_assist.model', 'claude-sonnet-4-6');
-            $claudeModels  = [
-                'claude-opus-4-6'            => 'Claude Opus 4.6',
-                'claude-sonnet-4-6'          => 'Claude Sonnet 4.6',
-                'claude-haiku-4-5-20251001'  => 'Claude Haiku 4.5',
-                'claude-3-7-sonnet-20250219' => 'Claude 3.7 Sonnet',
-                'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet',
-                'claude-3-5-haiku-20241022'  => 'Claude 3.5 Haiku',
-            ];
-            $claudeOptsHtml = '';
-            foreach ($claudeModels as $v => $l) {
-                $claudeOptsHtml .= '<option value="' . e($v) . '"' . ($v === $claudeModel ? ' selected' : '') . '>' . e($l) . '</option>';
+            // Model options from the cached OpenRouter model list (shared with the settings page)
+            $currentModel  = \Option::get('openrouter_assist.model', \Modules\HexawebAIAssist\Http\Controllers\AIAssistController::DEFAULT_MODEL);
+            $modelOptsHtml = '';
+            try {
+                $models = (new \Modules\HexawebAIAssist\Http\Controllers\AIAssistController)->getModels();
+            } catch (\Exception $e) {
+                $models = [];
+            }
+            foreach ($models as $m) {
+                $label = $m['name'] . ' — $' . number_format($m['prompt_price_per_mtok'], 2) . '/$' . number_format($m['completion_price_per_mtok'], 2) . ' per 1M';
+                $modelOptsHtml .= '<option value="' . e($m['id']) . '"' . ($m['id'] === $currentModel ? ' selected' : '') . '>' . e($label) . '</option>';
             }
 
-            // GPT model options
-            $gptModel   = \Option::get('gpt_assist.model', 'gpt-4o');
-            $gptModels  = [
-                'gpt-4o'        => 'GPT-4o',
-                'gpt-4o-mini'   => 'GPT-4o Mini',
-                'gpt-4-turbo'   => 'GPT-4 Turbo',
-                'gpt-4'         => 'GPT-4',
-                'gpt-3.5-turbo' => 'GPT-3.5 Turbo',
-            ];
-            $gptOptsHtml = '';
-            foreach ($gptModels as $v => $l) {
-                $gptOptsHtml .= '<option value="' . e($v) . '"' . ($v === $gptModel ? ' selected' : '') . '>' . e($l) . '</option>';
-            }
-
-            // Template options (shared across providers)
+            // Template options
             $templates = collect();
             try {
                 $templates = \DB::table('ai_assist_templates')
@@ -404,53 +345,26 @@ class AIAssistServiceProvider extends ServiceProvider
                 $tplOptsHtml .= '<optgroup label="Custom">' . $customGroup . '</optgroup>';
             }
 
-            $defaultProvider = $claudeKey ? 'claude' : 'gpt';
-            $panelBg         = ['claude' => '#fafeff', 'gpt' => '#fffef5'];
-
             ?>
 <div id="hbt-ai-wrap" style="margin-top:20px;border-top:2px solid #e8e0f5;">
 
   <!-- AI Assistant header -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 6px;">
     <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8e59c3;">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#6467f2;">
         &#9889; AI Assistant
       </span>
-      <!-- Provider toggle -->
-      <div style="display:flex;border:1px solid #d0bfee;border-radius:4px;overflow:hidden;">
-        <?php if ($claudeKey): ?>
-        <button type="button" class="hbt-provider-btn" data-provider="claude"
-          style="border:none;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;background:<?php echo $defaultProvider === 'claude' ? '#8e59c3' : '#f5f0fc'; ?>;color:<?php echo $defaultProvider === 'claude' ? '#fff' : '#8e59c3'; ?>;">
-          &#9889; Claude
-        </button>
-        <?php endif; ?>
-        <?php if ($gptKey): ?>
-        <button type="button" class="hbt-provider-btn" data-provider="gpt"
-          style="border:none;<?php echo $claudeKey ? 'border-left:1px solid #d0bfee;' : ''; ?>padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;background:<?php echo $defaultProvider === 'gpt' ? '#10a37f' : '#f0fdf9'; ?>;color:<?php echo $defaultProvider === 'gpt' ? '#fff' : '#10a37f'; ?>;">
-          &#9632; GPT
-        </button>
-        <?php endif; ?>
-      </div>
+      <span style="font-size:10px;font-weight:700;background:#6467f2;color:#fff;padding:2px 6px;border-radius:3px;">OpenRouter</span>
       <!-- Model selector -->
-      <select class="hbt-model-claude" style="font-size:11px;border:1px solid #d0bfee;border-radius:4px;padding:2px 4px;color:#555;<?php echo $defaultProvider !== 'claude' ? 'display:none;' : ''; ?>">
-        <?php echo $claudeOptsHtml; ?>
-      </select>
-      <select class="hbt-model-gpt" style="font-size:11px;border:1px solid #b2dfdb;border-radius:4px;padding:2px 4px;color:#555;<?php echo $defaultProvider !== 'gpt' ? 'display:none;' : ''; ?>">
-        <?php echo $gptOptsHtml; ?>
+      <select class="hbt-model" style="font-size:11px;border:1px solid #c7c9f7;border-radius:4px;padding:2px 4px;color:#555;max-width:340px;">
+        <?php echo $modelOptsHtml; ?>
       </select>
     </div>
     <!-- Settings links -->
     <div style="display:flex;align-items:center;gap:10px;">
-      <?php if ($claudeKey): ?>
-      <a href="<?php echo url('/hexaweb/claude-assist/settings'); ?>" target="_blank" style="font-size:11px;color:#8e59c3;text-decoration:none;white-space:nowrap;">
-        Claude <i class="glyphicon glyphicon-new-window" style="font-size:10px;"></i>
+      <a href="<?php echo url('/hexaweb/ai/settings'); ?>" target="_blank" style="font-size:11px;color:#6467f2;text-decoration:none;white-space:nowrap;">
+        Settings <i class="glyphicon glyphicon-new-window" style="font-size:10px;"></i>
       </a>
-      <?php endif; ?>
-      <?php if ($gptKey): ?>
-      <a href="<?php echo url('/hexaweb/gpt-assist/settings'); ?>" target="_blank" style="font-size:11px;color:#10a37f;text-decoration:none;white-space:nowrap;">
-        GPT <i class="glyphicon glyphicon-new-window" style="font-size:10px;"></i>
-      </a>
-      <?php endif; ?>
       <a href="<?php echo url('/hexaweb/ai/templates'); ?>" target="_blank" style="font-size:11px;color:#888;text-decoration:none;white-space:nowrap;">
         Templates <i class="glyphicon glyphicon-new-window" style="font-size:10px;"></i>
       </a>
@@ -554,9 +468,6 @@ class AIAssistServiceProvider extends ServiceProvider
 
             echo '<script type="text/x-hbt-data" id="hbt-ai-config">'
                 . json_encode([
-                    'defaultProvider' => $defaultProvider,
-                    'hasClaude'       => (bool)$claudeKey,
-                    'hasGpt'          => (bool)$gptKey,
                     'composeUrl'      => url('/hexaweb/ai/compose'),
                     'templateUrl'     => url('/hexaweb/ai/template'),
                     'polishUrl'       => url('/hexaweb/ai/polish'),
@@ -577,7 +488,7 @@ window._hbtAiBound = true;
     var _hbtCfgEl = document.getElementById('hbt-ai-config');
     if (!_hbtCfgEl) return; // panel not present on this page
     var _hbtCfg = JSON.parse(_hbtCfgEl.textContent || _hbtCfgEl.innerHTML || '{}');
-    var _hbtProvider = _hbtCfg.defaultProvider || 'claude';
+    var _hbtProvider = 'openrouter';
     var _hbtToken = jQuery('meta[name="csrf-token"]').attr('content');
 
     // Helper: get/set reply body (FreeScout uses Summernote on #body)
@@ -623,27 +534,6 @@ window._hbtAiBound = true;
         showFloatingAlert('success', 'Imported to reply.');
     }
 
-    // Update provider button styles and model selectors
-    function hbtUpdateProvider() {
-        jQuery('.hbt-provider-btn').each(function() {
-            var p = jQuery(this).data('provider');
-            var active = p === _hbtProvider;
-            if (p === 'claude') {
-                jQuery(this).css({ background: active ? '#8e59c3' : '#f5f0fc', color: active ? '#fff' : '#8e59c3' });
-            } else {
-                jQuery(this).css({ background: active ? '#10a37f' : '#f0fdf9', color: active ? '#fff' : '#10a37f' });
-            }
-        });
-        jQuery('.hbt-model-claude').toggle(_hbtProvider === 'claude');
-        jQuery('.hbt-model-gpt').toggle(_hbtProvider === 'gpt');
-    }
-
-    // Provider switch
-    jQuery(document).on('click', '.hbt-provider-btn', function() {
-        _hbtProvider = jQuery(this).data('provider');
-        hbtUpdateProvider();
-    });
-
     // Action tab switch — active tab: white bg, dark text; inactive: grey bg, muted text
     function hbtSetActiveTab(action) {
         jQuery('.hbt-action-tab').each(function() {
@@ -666,7 +556,7 @@ window._hbtAiBound = true;
         var isErr = r.status !== 'success';
         var now = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour12: true,
             year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' EST';
-        var provColor = provider === 'claude' ? '#8e59c3' : '#10a37f';
+        var provColor = '#6467f2';
         var borderColor = isErr ? '#e74c3c' : '#27ae60';
         var bg = isErr ? '#fff5f5' : '#f6fff8';
 
@@ -738,10 +628,9 @@ window._hbtAiBound = true;
         }
     });
 
-    // Helper: get active model for current provider
+    // Helper: get the selected OpenRouter model (single global select in the panel header)
     function hbtGetModel(panelId) {
-        var selector = _hbtProvider === 'claude' ? '.hbt-model-claude' : '.hbt-model-gpt';
-        return jQuery(panelId).find(selector).val() || '';
+        return jQuery('.hbt-model').val() || '';
     }
 
     // ── Template preview on select ──

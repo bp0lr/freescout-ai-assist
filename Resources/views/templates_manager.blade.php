@@ -9,14 +9,11 @@
         <h2 style="margin:0;font-size:22px;color:#333;">
             <i class="glyphicon glyphicon-list-alt" style="margin-right:8px;color:#777;"></i>
             AI Templates
-            <small style="font-size:13px;color:#999;margin-left:8px;">Used by Claude &amp; GPT</small>
+            <small style="font-size:13px;color:#999;margin-left:8px;">Used by OpenRouter</small>
         </h2>
         <div style="display:flex;gap:8px;">
-            <a href="{{ url('/hexaweb/claude-assist/settings') }}" class="btn btn-default btn-sm">
-                <i class="glyphicon glyphicon-flash"></i> Claude Settings
-            </a>
-            <a href="{{ url('/hexaweb/gpt-assist/settings') }}" class="btn btn-default btn-sm">
-                <i class="glyphicon glyphicon-comment"></i> GPT Settings
+            <a href="{{ url('/hexaweb/ai/settings') }}" class="btn btn-default btn-sm">
+                <i class="glyphicon glyphicon-cog"></i> AI Settings
             </a>
         </div>
     </div>
@@ -128,7 +125,7 @@
                     <label style="font-size:13px;font-weight:600;">Prompt <span style="color:#d9534f;">*</span></label>
                     <textarea name="prompt" class="form-control" rows="5"
                               placeholder="Write your prompt instructions. Conversation context will be prepended automatically if enabled." required></textarea>
-                    <span class="help-block" style="font-size:12px;">Works with both Claude and GPT.</span>
+                    <span class="help-block" style="font-size:12px;">Works with any OpenRouter model.</span>
                 </div>
                 <button type="submit" class="btn btn-primary">
                     <i class="glyphicon glyphicon-plus"></i> Create Template
