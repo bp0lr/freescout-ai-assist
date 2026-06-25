@@ -43,9 +43,9 @@ class AIAssistController extends Controller
             abort(403);
         }
 
-        $name   = trim($request->input('name', ''));
-        $prompt = trim($request->input('prompt', ''));
-        $desc   = trim($request->input('description', ''));
+        $name   = trim($request->input('name') ?? '');
+        $prompt = trim($request->input('prompt') ?? '');
+        $desc   = trim($request->input('description') ?? '');
         $id     = (int)$request->input('id', 0);
 
         if (!$name || !$prompt) {
@@ -164,16 +164,16 @@ class AIAssistController extends Controller
             abort(403);
         }
 
-        $model        = trim($request->input('model', '')) ?: self::DEFAULT_MODEL;
-        $maxTokens    = max(1, (int)$request->input('max_tokens', 1024));
-        $systemPrompt = trim($request->input('system_prompt', ''));
+        $model        = trim($request->input('model') ?? '') ?: self::DEFAULT_MODEL;
+        $maxTokens    = max(1, (int) ($request->input('max_tokens') ?: 1024));
+        $systemPrompt = trim($request->input('system_prompt') ?? '');
 
         \Option::set('openrouter_assist.model', $model);
         \Option::set('openrouter_assist.max_tokens', $maxTokens);
         \Option::set('openrouter_assist.system_prompt', $systemPrompt);
 
         // Only overwrite the stored key when a real value is submitted (blank field = keep existing).
-        $key = trim($request->input('api_key', ''));
+        $key = trim($request->input('api_key') ?? '');
         if ($key !== '') {
             \Option::set('openrouter_assist.api_key_encrypted', \Crypt::encryptString($key));
         }
@@ -198,7 +198,7 @@ class AIAssistController extends Controller
 
     public function compose(Request $request)
     {
-        $prompt = trim($request->input('prompt', ''));
+        $prompt = trim($request->input('prompt') ?? '');
         if (!$prompt) {
             return response()->json(['status' => 'error', 'msg' => 'Please enter instructions.']);
         }
