@@ -433,7 +433,8 @@ class AIAssistController extends Controller
                     usort($list, function ($a, $b) {
                         return strcasecmp($a['name'], $b['name']);
                     });
-                    \Option::set('openrouter_assist.models_cache', json_encode(['fetched_at' => time(), 'list' => $list]));
+                    // FreeScout's Option facade JSON-encodes/decodes on its own — store the array directly.
+                    \Option::set('openrouter_assist.models_cache', ['fetched_at' => time(), 'list' => $list]);
                     return $list;
                 }
             }
@@ -448,11 +449,10 @@ class AIAssistController extends Controller
     // Returns the cached model list, or null. $freshOnly enforces the 24h TTL.
     private function readModelsCache(bool $freshOnly): ?array
     {
-        $cached = \Option::get('openrouter_assist.models_cache', null);
-        if (!$cached) {
-            return null;
+        $decoded = \Option::get('openrouter_assist.models_cache', null);
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true); // tolerate older Option versions that return a raw string
         }
-        $decoded = json_decode($cached, true);
         if (empty($decoded['list']) || !is_array($decoded['list'])) {
             return null;
         }
